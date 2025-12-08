@@ -50,6 +50,10 @@ const userSchema = new mongoose.Schema(
         return !this.isGuest;
       },
       minlength: [8, "Password must be at least 8 characters long"],
+      match: [
+        /^(?=.*[0-9])(?=.*[!@#$%^&*])/,
+        "Password must contain at least one number and one special character",
+      ],
       select: false,
     },
 
