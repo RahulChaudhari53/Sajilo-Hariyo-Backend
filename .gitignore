@@ -1,5 +1,7 @@
 node_modules/
 
+public/
+
 .env
 
 logs/
@@ -9,3 +11,8 @@ testEmail.js
 testSMS.js
 
 /src/utils/sms.js
+
+API_DOCUMENTATION.md
+
+BACKEND_GAPS_ANALYSIS.md
+

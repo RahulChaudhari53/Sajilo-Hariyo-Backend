@@ -25,37 +25,21 @@ const createSendToken = (user, statusCode, res) => {
   });
 };
 
-// =====================================
-//          SIGNUP CONTROLLER
-// =====================================
+// SIGNUP
 exports.signup = async (req, res, next) => {
   try {
     const { name, email, phone, password } = req.body;
 
-    if (!name || !email || !phone || !password) {
-      return res.status(400).json({
-        status: "fail",
-        message: "Please fill all required fields.",
-      });
-    }
-
+    // Check if user exists
     const existingUser = await User.findOne({
       $or: [{ email: email }, { phone: phone }],
     });
 
     if (existingUser) {
-      if (existingUser.email === email) {
-        return res.status(409).json({
-          status: "fail",
-          message: "An account with this email already exists.",
-        });
-      }
-      if (existingUser.phone === phone) {
-        return res.status(409).json({
-          status: "fail",
-          message: "An account with this phone number already exists.",
-        });
-      }
+      return res.status(409).json({
+        status: "fail",
+        message: "User with this email or phone already exists.",
+      });
     }
 
     const newUser = await User.create({
@@ -63,27 +47,26 @@ exports.signup = async (req, res, next) => {
       email,
       phone,
       password,
-      isGuest: false,
+      // role defaults to customer
     });
 
-    // Auto-login (send JWT token)
+    try {
+      await sendEmail({
+        email: newUser.email,
+        subject: "Welcome to Sajilo Hariyo!",
+        message: `Hello ${newUser.name},\n\nWelcome to Sajilo Hariyo! 🌱`,
+      });
+    } catch (err) {
+      console.log("Welcome email failed", err);
+    }
+
     createSendToken(newUser, 201, res);
-
-    sendEmail({
-      email: newUser.email,
-      subject: "Welcome to Sajilo Hariyo!",
-      message: `Hello ${newUser.name},\n\nYour account has been successfully created.\nWelcome to Sajilo Hariyo! 🌱\n\nRegards,\nSajilo Hariyo Team`,
-    }).catch((err) => {
-      console.error("Signup success email failed:", err.message);
-    });
-  } catch (error) {
+  } catch (err) {
     res.status(400).json({ status: "fail", message: err.message });
   }
 };
 
-// ============================
 // LOGIN
-// ============================
 exports.login = async (req, res, next) => {
   try {
     const { phone, password } = req.body;
@@ -106,9 +89,7 @@ exports.login = async (req, res, next) => {
   }
 };
 
-// ============================
 // FORGOT PASSWORD (Request OTP)
-// ============================
 exports.forgotPassword = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
@@ -148,9 +129,7 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// ============================
 // FORGOT PASSWORD (VERIFY OTP)
-// ============================
 exports.verifyPassOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -179,9 +158,7 @@ exports.verifyPassOTP = async (req, res) => {
   }
 };
 
-// ============================
 // FORGOT PASSWORD (RESET PASSWORD)
-// ============================
 exports.resetPassword = async (req, res) => {
   try {
     const { email, otp, password } = req.body;

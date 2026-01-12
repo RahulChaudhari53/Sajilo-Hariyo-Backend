@@ -1,8 +1,15 @@
-// models/User.js
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
-// addressSchema
+const addressSchema = new mongoose.Schema({
+  label: { type: String, default: "Home" }, // e.g., Home, Work
+  street: { type: String, required: true },
+  city: { type: String, required: true },
+  detail: { type: String }, // For "Near Radisson Hotel"
+  phone: { type: String, required: true },
+  isDefault: { type: Boolean, default: false },
+  username: { type: String }, // Store user name for admin context
+});
 
 const userSchema = new mongoose.Schema(
   {
@@ -31,24 +38,9 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/^\d{10}$/, "Please provide a valid 10-digit phone number"],
     },
-
-    role: {
-      type: String,
-      enum: ["customer", "admin"],
-      default: "customer",
-    },
-
-    // guest-logic
-    isGuest: {
-      type: Boolean,
-      default: false,
-    },
-
     password: {
       type: String,
-      required: function () {
-        return !this.isGuest;
-      },
+      required: [true, "Please provide a password"],
       minlength: [8, "Password must be at least 8 characters long"],
       match: [
         /^(?=.*[0-9])(?=.*[!@#$%^&*])/,
@@ -56,24 +48,24 @@ const userSchema = new mongoose.Schema(
       ],
       select: false,
     },
+    profileImage: {
+      type: String,
+      default: "default.png", // public/uploads/profiles
+    },
+    role: {
+      type: String,
+      enum: ["customer", "admin"],
+      default: "customer",
+    },
 
-    // no address fields for now
+    addresses: [addressSchema],
+    wishlist: [{ type: mongoose.Schema.ObjectId, ref: "Product" }],
 
     // otp fields
-    otp: {
-      type: String,
-      select: false,
-    },
-    otpExpires: {
-      type: Date,
-    },
+    otp: { type: String, select: false },
+    otpExpires: { type: Date },
 
-    // Soft Delete
-    active: {
-      type: Boolean,
-      default: true,
-      select: false,
-    },
+    active: { type: Boolean, default: true, select: false },
   },
   {
     timestamps: true,
@@ -98,8 +90,7 @@ userSchema.methods.generateOTP = async function () {
 
 userSchema.methods.correctOTP = async function (candidateOTP) {
   if (!this.otp || !this.otpExpires) return false;
-  if (this.otpExpires < Date.now()) return false; // Expired
-
+  if (this.otpExpires < Date.now()) return false;
   return await bcrypt.compare(candidateOTP, this.otp);
 };
 
